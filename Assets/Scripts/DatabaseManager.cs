@@ -6,17 +6,21 @@ using UnityEngine;
 
 public class DatabaseManager : MonoBehaviour
 {
+    [Header("Scripts")]
     public UserDataController userDataController;
     public StartNewOrder startNewOrder;
 
+    [Header("Data")]
     public int userGold = 0;
     public int meat = 0;
     public int iron = 0;
     public int herbs = 0;
 
+    public IDbConnection dbConnection;
+
     void Start()
     {
-        IDbConnection dbConnection = CreateAndOpenDatabase();
+        dbConnection = CreateAndOpenDatabase();
         IDbCommand dbCommandReadValues = dbConnection.CreateCommand();
 
         dbCommandReadValues.CommandText = "SELECT Gold FROM Economy";
@@ -48,16 +52,6 @@ public class DatabaseManager : MonoBehaviour
 
         userDataController.UpdateAllText();
     }
-
-    //private void OnMouseDown()
-    //{
-    //    hitCount++;
-    //    IDbConnection dbConnection = CreateAndOpenDatabase();
-    //    IDbCommand dbCommandInsertValue = dbConnection.CreateCommand();
-    //    dbCommandInsertValue.CommandText = "INSERT OR REPLACE INTO HitCountTableSimple (id, hits) VALUES (0, " + hitCount + ")";
-    //    dbCommandInsertValue.ExecuteNonQuery();
-    //    dbConnection.Close();
-    //}
 
     private IDbConnection CreateAndOpenDatabase()
     {
@@ -102,25 +96,102 @@ public class DatabaseManager : MonoBehaviour
         dbCommandCreateTable.ExecuteReader();
     }
 
-    private void SetNewOrders(IDbConnection dbConnection, int adventurerId, string resourceName, int quantity)
+    private int GetAdventurerIdByName(IDbConnection dbConnection, string adventurerName)
     {
-        IDbCommand dbCommandSetNewOrders = dbConnection.CreateCommand();
-        dbCommandSetNewOrders.CommandText = @"
-        INSERT INTO Orders (OrderType, IsCompleted) 
-        VALUES (@adventurerId, @orderType, 0)";
-        IDbDataParameter parameterAdventurerId = dbCommandSetNewOrders.CreateParameter();
-        parameterAdventurerId.ParameterName = "@adventurerId";
-        parameterAdventurerId.Value = adventurerId;
+        IDbCommand dbCommandGetId = dbConnection.CreateCommand();
+        dbCommandGetId.CommandText = "SELECT Id FROM Adventurers WHERE Name = @name";
 
-        IDbDataParameter parameterOrderType = dbCommandSetNewOrders.CreateParameter();
-        parameterOrderType.ParameterName = "@orderType";
-        parameterOrderType.Value = $"{quantity}x {resourceName}";
+        IDbDataParameter parameterName = dbCommandGetId.CreateParameter();
+        parameterName.ParameterName = "@name";
+        parameterName.Value = adventurerName;
 
-        dbCommandSetNewOrders.Parameters.Add(parameterAdventurerId);
-        dbCommandSetNewOrders.Parameters.Add(parameterOrderType);
+        dbCommandGetId.Parameters.Add(parameterName);
 
-        dbCommandSetNewOrders.ExecuteNonQuery();
+        int adventurerId = -1;
+        IDataReader dataReader = dbCommandGetId.ExecuteReader();
+        if (dataReader.Read())
+        {
+            adventurerId = dataReader.GetInt32(0);
+        }
+        dataReader.Close();
+
+        return adventurerId;
     }
+
+    public void SetNewOrders(IDbConnection dbConnection, string adventurerName, string resourceName, int quantity)
+    {
+        int adventurerId = GetAdventurerIdByName(dbConnection, adventurerName);
+        if (adventurerId != -1)
+        {
+            IDbCommand dbCommandSetNewOrders = dbConnection.CreateCommand();
+            dbCommandSetNewOrders.CommandText = @"
+            INSERT INTO Orders (AdventurerId, OrderType, IsCompleted) 
+            VALUES (@adventurerId, @orderType, 0)";
+
+            IDbDataParameter parameterAdventurerId = dbCommandSetNewOrders.CreateParameter();
+            parameterAdventurerId.ParameterName = "@adventurerId";
+            parameterAdventurerId.Value = adventurerId;
+
+            IDbDataParameter parameterOrderType = dbCommandSetNewOrders.CreateParameter();
+            parameterOrderType.ParameterName = "@orderType";
+            parameterOrderType.Value = $"{quantity}x {resourceName}";
+
+            dbCommandSetNewOrders.Parameters.Add(parameterAdventurerId);
+            dbCommandSetNewOrders.Parameters.Add(parameterOrderType);
+
+            dbCommandSetNewOrders.ExecuteNonQuery();
+        }
+    }
+
+    public void UpdateUserData(int gold, int meat, int iron, int herbs, bool isOrderCompleted, int orderId)
+    {
+        using (IDbConnection dbConnection = CreateAndOpenDatabase())
+        {
+            IDbCommand command = dbConnection.CreateCommand();
+            command.CommandText = @"
+            UPDATE Economy SET Gold = @gold;
+            UPDATE Resources SET Quantity = @meat WHERE ResourceName = 'Meat';
+            UPDATE Resources SET Quantity = @iron WHERE ResourceName = 'Iron';
+            UPDATE Resources SET Quantity = @herbs WHERE ResourceName = 'Herbs';
+            UPDATE Orders SET IsCompleted = @isCompleted WHERE Id = @orderId;
+        ";
+
+            IDbDataParameter goldParam = command.CreateParameter();
+            goldParam.ParameterName = "@gold";
+            goldParam.Value = gold;
+
+            IDbDataParameter meatParam = command.CreateParameter();
+            meatParam.ParameterName = "@meat";
+            meatParam.Value = meat;
+
+            IDbDataParameter ironParam = command.CreateParameter();
+            ironParam.ParameterName = "@iron";
+            ironParam.Value = iron;
+
+            IDbDataParameter herbsParam = command.CreateParameter();
+            herbsParam.ParameterName = "@herbs";
+            herbsParam.Value = herbs;
+
+            IDbDataParameter isCompletedParam = command.CreateParameter();
+            isCompletedParam.ParameterName = "@isCompleted";
+            isCompletedParam.Value = isOrderCompleted ? 1 : 0;
+
+            IDbDataParameter orderIdParam = command.CreateParameter();
+            orderIdParam.ParameterName = "@orderId";
+            orderIdParam.Value = orderId;
+
+            command.Parameters.Add(goldParam);
+            command.Parameters.Add(meatParam);
+            command.Parameters.Add(ironParam);
+            command.Parameters.Add(herbsParam);
+            command.Parameters.Add(isCompletedParam);
+            command.Parameters.Add(orderIdParam);
+
+            command.ExecuteNonQuery();
+        }
+    }
+
+
 
     private Dictionary<string, string> GetAdventurersDictionary(IDbConnection dbConnection)
     {
@@ -157,14 +228,4 @@ public class DatabaseManager : MonoBehaviour
 
         return resourcesDictionary;
     }
-
-    //    INSERT INTO Adventurers(Name, Type, Level, Reputation) VALUES
-    //      ('Sir Lancelot', 'Knight', 5, 10),
-    //      ('Merlin', 'Mage', 7, 15),
-    //      ('Robin', 'Rogue', 4, 8);
-    //    INSERT INTO Resources(ResourceName, Quantity) VALUES
-    //      ('Meat', 10),
-    //      ('Vegetables', 15),
-    //      ('Potions', 5);
-    //    INSERT INTO Economy(Gold) VALUES(1000);
 }

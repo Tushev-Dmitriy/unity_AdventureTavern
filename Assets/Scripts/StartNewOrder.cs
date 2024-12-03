@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Data.Common;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -81,6 +82,8 @@ public class StartNewOrder : MonoBehaviour
         rndResourcesCountNum = Random.Range(1, 11);
         string rndResourceName = resources[rndOrderNum];
         personOrder.text = $"My order is: {rndResourcesCountNum} {rndResourceName}";
+
+        //userDataController.databaseManager.SetNewOrders(userDataController.databaseManager.dbConnection, rndPersonName, rndResourceName, rndResourcesCountNum);
     }
 
     public void SetUserComplete(bool userDoing)
@@ -96,15 +99,24 @@ public class StartNewOrder : MonoBehaviour
             dialogObj.SetActive(false);
             userDataController.UpdateAllText();
             personImg.color = tempColor;
+            //SaveUserData();
             StartCoroutine(GetNewPersonInTavern(5));
         } else
         {
             userDataController.ProgressController(false);
             dialogObj.SetActive(false);
             personImg.color = tempColor;
+            SaveUserData();
             StartCoroutine(GetNewPersonInTavern(5));
         }  
     }
+
+    private void SaveUserData()
+    {
+        //userDataController.databaseManager.UpdateUserData(userDataController.databaseManager.userGold, userDataController.databaseManager.meat, 
+        //    userDataController.databaseManager.iron, userDataController.databaseManager.herbs);
+    }
+
 
     private bool CanComplete()
     {
