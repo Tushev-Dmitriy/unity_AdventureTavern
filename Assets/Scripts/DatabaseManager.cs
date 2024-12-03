@@ -11,8 +11,8 @@ public class DatabaseManager : MonoBehaviour
 
     public int userGold = 0;
     public int meat = 0;
-    public int vegetables = 0;
-    public int potions = 0;
+    public int iron = 0;
+    public int herbs = 0;
 
     void Start()
     {
@@ -34,16 +34,17 @@ public class DatabaseManager : MonoBehaviour
         {
             resourcesData.Add(dataReader.GetInt32(0));
         }
-        if (resourcesData.Count >= 3)
+        if (resourcesData.Count == 3)
         {
             meat = resourcesData[0];
-            vegetables = resourcesData[1];
-            potions = resourcesData[2];
+            iron = resourcesData[1];
+            herbs = resourcesData[2];
         }
         dataReader.Close();
 
         Dictionary<string, string> adventurersDictionary = GetAdventurersDictionary(dbConnection);
-        startNewOrder.SetNewPerson(adventurersDictionary);
+        Dictionary<string, int> resourcesDictionary = GetResourcesDictionary(dbConnection);
+        startNewOrder.GetPersonLists(adventurersDictionary, resourcesDictionary);
 
         userDataController.UpdateAllText();
     }
@@ -75,9 +76,7 @@ public class DatabaseManager : MonoBehaviour
             CREATE TABLE IF NOT EXISTS Adventurers (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
                 Name TEXT NOT NULL,
-                Type TEXT NOT NULL,
-                Level INTEGER NOT NULL,
-                Reputation INTEGER NOT NULL
+                Type TEXT NOT NULL
             );
 
             CREATE TABLE IF NOT EXISTS Orders (
@@ -103,6 +102,26 @@ public class DatabaseManager : MonoBehaviour
         dbCommandCreateTable.ExecuteReader();
     }
 
+    private void SetNewOrders(IDbConnection dbConnection, int adventurerId, string resourceName, int quantity)
+    {
+        IDbCommand dbCommandSetNewOrders = dbConnection.CreateCommand();
+        dbCommandSetNewOrders.CommandText = @"
+        INSERT INTO Orders (OrderType, IsCompleted) 
+        VALUES (@adventurerId, @orderType, 0)";
+        IDbDataParameter parameterAdventurerId = dbCommandSetNewOrders.CreateParameter();
+        parameterAdventurerId.ParameterName = "@adventurerId";
+        parameterAdventurerId.Value = adventurerId;
+
+        IDbDataParameter parameterOrderType = dbCommandSetNewOrders.CreateParameter();
+        parameterOrderType.ParameterName = "@orderType";
+        parameterOrderType.Value = $"{quantity}x {resourceName}";
+
+        dbCommandSetNewOrders.Parameters.Add(parameterAdventurerId);
+        dbCommandSetNewOrders.Parameters.Add(parameterOrderType);
+
+        dbCommandSetNewOrders.ExecuteNonQuery();
+    }
+
     private Dictionary<string, string> GetAdventurersDictionary(IDbConnection dbConnection)
     {
         Dictionary<string, string> adventurersDictionary = new Dictionary<string, string>();
@@ -119,6 +138,24 @@ public class DatabaseManager : MonoBehaviour
         dataReader.Close();
 
         return adventurersDictionary;
+    }
+
+    private Dictionary<string, int> GetResourcesDictionary(IDbConnection dbConnection)
+    {
+        Dictionary<string, int> resourcesDictionary = new Dictionary<string, int>();
+        IDbCommand dbCommandReadAdventurers = dbConnection.CreateCommand();
+        dbCommandReadAdventurers.CommandText = "SELECT ResourceName, Quantity FROM Resources";
+
+        IDataReader dataReader = dbCommandReadAdventurers.ExecuteReader();
+        while (dataReader.Read())
+        {
+            string name = dataReader.GetString(0);
+            int count = dataReader.GetInt32(1);
+            resourcesDictionary[name] = count;
+        }
+        dataReader.Close();
+
+        return resourcesDictionary;
     }
 
     //    INSERT INTO Adventurers(Name, Type, Level, Reputation) VALUES
