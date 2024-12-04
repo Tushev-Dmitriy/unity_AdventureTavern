@@ -28,6 +28,7 @@ public class StartNewOrder : MonoBehaviour
     private List<int> resourcesCount = new List<int>();
     private int rndOrderNum = -1;
     private int rndResourcesCountNum = -1;
+    private int orderId = -1;
 
     private void Awake()
     {
@@ -83,7 +84,7 @@ public class StartNewOrder : MonoBehaviour
         string rndResourceName = resources[rndOrderNum];
         personOrder.text = $"My order is: {rndResourcesCountNum} {rndResourceName}";
 
-        //userDataController.databaseManager.SetNewOrders(userDataController.databaseManager.dbConnection, rndPersonName, rndResourceName, rndResourcesCountNum);
+        orderId = userDataController.databaseManager.SetNewOrders(userDataController.databaseManager.dbConnection, rndPersonName, rndResourceName, rndResourcesCountNum);
     }
 
     public void SetUserComplete(bool userDoing)
@@ -97,24 +98,25 @@ public class StartNewOrder : MonoBehaviour
         {
             userDataController.ProgressController(true);
             dialogObj.SetActive(false);
-            userDataController.UpdateAllText();
             personImg.color = tempColor;
-            //SaveUserData();
+            userDataController.databaseManager.userGold += rndResourcesCountNum * 10;
+            userDataController.UpdateAllText();
+            SaveUserData(true, orderId);
             StartCoroutine(GetNewPersonInTavern(5));
         } else
         {
             userDataController.ProgressController(false);
             dialogObj.SetActive(false);
             personImg.color = tempColor;
-            SaveUserData();
+            SaveUserData(false, orderId);
             StartCoroutine(GetNewPersonInTavern(5));
         }  
     }
 
-    private void SaveUserData()
+    private void SaveUserData(bool complete, int orderId)
     {
-        //userDataController.databaseManager.UpdateUserData(userDataController.databaseManager.userGold, userDataController.databaseManager.meat, 
-        //    userDataController.databaseManager.iron, userDataController.databaseManager.herbs);
+        userDataController.databaseManager.UpdateUserData(userDataController.databaseManager.userGold, userDataController.databaseManager.meat,
+            userDataController.databaseManager.iron, userDataController.databaseManager.herbs, complete, orderId);
     }
 
 

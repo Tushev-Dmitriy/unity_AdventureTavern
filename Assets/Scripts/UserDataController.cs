@@ -12,6 +12,7 @@ public class UserDataController : MonoBehaviour
     public TMP_Text ironText;
     public TMP_Text herbsText;
     public Slider progressBar;
+    public GameObject winObj;
 
     public void IncreaseResource(int numOfRes, bool isInrease, int count)
     {
@@ -44,12 +45,55 @@ public class UserDataController : MonoBehaviour
 
     public void ProgressController(bool isIncrease)
     {
-        if (progressBar.value != 10)
+        if (progressBar.value + 1 != 10)
         {
             progressBar.value = isIncrease ? progressBar.value + 1 : progressBar.value - 1;
         } else
         {
-            Debug.Log(1);
+            winObj.SetActive(true);
+            progressBar.value++;
+            Time.timeScale = 0;
         }
+    }
+
+    public void ByNewItem(int numOfItem)
+    {
+        switch (numOfItem)
+        {
+            case 0:
+                if (databaseManager.userGold - 15 >= 0)
+                {
+                    databaseManager.meat++;
+                    databaseManager.userGold -= 15;
+                }
+                break;
+            case 1:
+                if (databaseManager.userGold - 10 >= 0)
+                {
+                    databaseManager.iron++;
+                    databaseManager.userGold -= 10;
+                }
+                break;
+            case 2:
+                if (databaseManager.userGold - 5 >= 0)
+                {
+                    databaseManager.herbs++;
+                    databaseManager.userGold -= 5;
+                }
+                break;
+        }
+
+        UpdateAllText();
+    }
+
+    public void QuitGame()
+    {
+        Application.Quit(0);
+    }
+
+    public void ResetStat()
+    {
+        databaseManager.ResetToDefaultValues(databaseManager.dbConnection);
+        UpdateAllText();
     }
 }

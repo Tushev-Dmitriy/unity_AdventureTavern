@@ -16,9 +16,15 @@ public class DatabaseManager : MonoBehaviour
     public int iron = 0;
     public int herbs = 0;
 
+    public int orderId;
     public IDbConnection dbConnection;
 
-    void Start()
+    private void Start()
+    {
+        StartDb();
+    }
+
+    private void StartDb()
     {
         dbConnection = CreateAndOpenDatabase();
         IDbCommand dbCommandReadValues = dbConnection.CreateCommand();
@@ -118,7 +124,7 @@ public class DatabaseManager : MonoBehaviour
         return adventurerId;
     }
 
-    public void SetNewOrders(IDbConnection dbConnection, string adventurerName, string resourceName, int quantity)
+    public int SetNewOrders(IDbConnection dbConnection, string adventurerName, string resourceName, int quantity)
     {
         int adventurerId = GetAdventurerIdByName(dbConnection, adventurerName);
         if (adventurerId != -1)
@@ -126,7 +132,8 @@ public class DatabaseManager : MonoBehaviour
             IDbCommand dbCommandSetNewOrders = dbConnection.CreateCommand();
             dbCommandSetNewOrders.CommandText = @"
             INSERT INTO Orders (AdventurerId, OrderType, IsCompleted) 
-            VALUES (@adventurerId, @orderType, 0)";
+            VALUES (@adventurerId, @orderType, 0);
+            SELECT last_insert_rowid();";
 
             IDbDataParameter parameterAdventurerId = dbCommandSetNewOrders.CreateParameter();
             parameterAdventurerId.ParameterName = "@adventurerId";
@@ -139,9 +146,16 @@ public class DatabaseManager : MonoBehaviour
             dbCommandSetNewOrders.Parameters.Add(parameterAdventurerId);
             dbCommandSetNewOrders.Parameters.Add(parameterOrderType);
 
-            dbCommandSetNewOrders.ExecuteNonQuery();
+            object result = dbCommandSetNewOrders.ExecuteScalar();
+            if (result != null && int.TryParse(result.ToString(), out int orderId))
+            {
+                return orderId;
+            }
         }
+
+        return -1;
     }
+
 
     public void UpdateUserData(int gold, int meat, int iron, int herbs, bool isOrderCompleted, int orderId)
     {
@@ -191,6 +205,24 @@ public class DatabaseManager : MonoBehaviour
         }
     }
 
+    public void ResetToDefaultValues(IDbConnection dbConnection)
+    {
+        IDbCommand resetCommand = dbConnection.CreateCommand();
+        resetCommand.CommandText = @"
+            UPDATE Economy SET Gold = 100;
+            UPDATE Resources 
+        SET Quantity = CASE ResourceName
+            WHEN 'Meat' THEN 10
+            WHEN 'Iron' THEN 10
+            WHEN 'Herbs' THEN 15
+        END;
+        DELETE FROM Orders;
+        ";
+
+        resetCommand.ExecuteNonQuery();
+
+        StartDb();
+    }
 
 
     private Dictionary<string, string> GetAdventurersDictionary(IDbConnection dbConnection)
