@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Data.Common;
@@ -58,7 +59,7 @@ public class StartNewOrder : MonoBehaviour
     {
         personBtn.SetActive(true);
 
-        int rndPersonNum = Random.Range(0, persons.Count);
+        int rndPersonNum = UnityEngine.Random.Range(0, persons.Count);
         string rndPersonName = persons[rndPersonNum];
         string rndPersonType = personsTypes[rndPersonNum];
         personName.text = $"{rndPersonName} ({rndPersonType})";
@@ -79,8 +80,8 @@ public class StartNewOrder : MonoBehaviour
         personImg.sprite = personSprite[numOfSprite];
         personImg.color = mainColor;
 
-        rndOrderNum = Random.Range(0, resources.Count);
-        rndResourcesCountNum = Random.Range(1, 11);
+        rndOrderNum = UnityEngine.Random.Range(0, resources.Count);
+        rndResourcesCountNum = UnityEngine.Random.Range(1, 11);
         string rndResourceName = resources[rndOrderNum];
         personOrder.text = $"My order is: {rndResourcesCountNum} {rndResourceName}";
 
@@ -115,8 +116,10 @@ public class StartNewOrder : MonoBehaviour
 
     private void SaveUserData(bool complete, int orderId)
     {
-        userDataController.databaseManager.UpdateUserData(userDataController.databaseManager.userGold, userDataController.databaseManager.meat,
-            userDataController.databaseManager.iron, userDataController.databaseManager.herbs, complete, orderId);
+        int progressValue = Convert.ToInt32(userDataController.progressBar.value);
+        userDataController.databaseManager.UpdateUserData(userDataController.databaseManager.userGold, progressValue,
+            userDataController.databaseManager.meat, userDataController.databaseManager.iron, 
+            userDataController.databaseManager.herbs, complete, orderId);
     }
 
 

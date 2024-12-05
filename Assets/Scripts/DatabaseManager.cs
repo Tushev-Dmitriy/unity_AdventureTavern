@@ -11,6 +11,7 @@ public class DatabaseManager : MonoBehaviour
     public StartNewOrder startNewOrder;
 
     [Header("Data")]
+    public int userProgress = 0;
     public int userGold = 0;
     public int meat = 0;
     public int iron = 0;
@@ -29,11 +30,12 @@ public class DatabaseManager : MonoBehaviour
         dbConnection = CreateAndOpenDatabase();
         IDbCommand dbCommandReadValues = dbConnection.CreateCommand();
 
-        dbCommandReadValues.CommandText = "SELECT Gold FROM Economy";
+        dbCommandReadValues.CommandText = "SELECT * FROM Economy";
         IDataReader dataReader = dbCommandReadValues.ExecuteReader();
         while (dataReader.Read())
         {
-            userGold = dataReader.GetInt32(0);
+            userGold = dataReader.GetInt32(1);
+            userProgress = dataReader.GetInt32(2);
         }
         dataReader.Close();
 
@@ -95,7 +97,8 @@ public class DatabaseManager : MonoBehaviour
 
             CREATE TABLE IF NOT EXISTS Economy (
                 Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                Gold INTEGER NOT NULL
+                Gold INTEGER NOT NULL,
+                Progress INTEGER NOT NULL 
             );";
 
         dbCommandCreateTable.CommandText = createAllTables;
@@ -157,13 +160,14 @@ public class DatabaseManager : MonoBehaviour
     }
 
 
-    public void UpdateUserData(int gold, int meat, int iron, int herbs, bool isOrderCompleted, int orderId)
+    public void UpdateUserData(int gold, int progress, int meat, int iron, int herbs, bool isOrderCompleted, int orderId)
     {
         using (IDbConnection dbConnection = CreateAndOpenDatabase())
         {
             IDbCommand command = dbConnection.CreateCommand();
             command.CommandText = @"
             UPDATE Economy SET Gold = @gold;
+            UPDATE Economy SET Progress = @progress;
             UPDATE Resources SET Quantity = @meat WHERE ResourceName = 'Meat';
             UPDATE Resources SET Quantity = @iron WHERE ResourceName = 'Iron';
             UPDATE Resources SET Quantity = @herbs WHERE ResourceName = 'Herbs';
@@ -173,6 +177,10 @@ public class DatabaseManager : MonoBehaviour
             IDbDataParameter goldParam = command.CreateParameter();
             goldParam.ParameterName = "@gold";
             goldParam.Value = gold;
+
+            IDbDataParameter progressParam = command.CreateParameter();
+            progressParam.ParameterName = "@progress";
+            progressParam.Value = progress;
 
             IDbDataParameter meatParam = command.CreateParameter();
             meatParam.ParameterName = "@meat";
@@ -195,6 +203,7 @@ public class DatabaseManager : MonoBehaviour
             orderIdParam.Value = orderId;
 
             command.Parameters.Add(goldParam);
+            command.Parameters.Add(progressParam);
             command.Parameters.Add(meatParam);
             command.Parameters.Add(ironParam);
             command.Parameters.Add(herbsParam);
@@ -210,6 +219,7 @@ public class DatabaseManager : MonoBehaviour
         IDbCommand resetCommand = dbConnection.CreateCommand();
         resetCommand.CommandText = @"
             UPDATE Economy SET Gold = 100;
+            UPDATE Economy SET Progress = 0;
             UPDATE Resources 
         SET Quantity = CASE ResourceName
             WHEN 'Meat' THEN 10

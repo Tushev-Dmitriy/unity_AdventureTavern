@@ -95,5 +95,6 @@ public class UserDataController : MonoBehaviour
     {
         databaseManager.ResetToDefaultValues(databaseManager.dbConnection);
         UpdateAllText();
+        progressBar.value = databaseManager.userProgress;
     }
 }
